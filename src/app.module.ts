@@ -2,8 +2,9 @@ import { CustomConfigModule } from './config/configs.module';
 import { TypeOrmDbConfig } from './config/typeorm.config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserModule } from './modules/user/user.module';
-import { Module } from '@nestjs/common';
 import { AuthModule } from './modules/auth/auth.module';
+import { JwtModule } from '@nestjs/jwt';
+import { Module } from '@nestjs/common';
 
 @Module({
   imports: [
@@ -13,7 +14,9 @@ import { AuthModule } from './modules/auth/auth.module';
       inject: [TypeOrmDbConfig]
     }),
     UserModule,
-    AuthModule],
+    AuthModule,
+    JwtModule
+  ],
   controllers: [],
   providers: [TypeOrmDbConfig],
 })

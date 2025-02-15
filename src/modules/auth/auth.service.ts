@@ -1,7 +1,10 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { CheckOtpDto, SendOtpDto } from './dto/auth.dto';
 import { InjectRepository } from '@nestjs/typeorm';
+import { TTokensPayload } from './types/payload';
+import { ConfigService } from '@nestjs/config';
 import { UserEntity } from '../user/entities/user.entity';
+import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { OTPEntity } from '../user/entities/otp.entity';
 import { randomInt } from 'crypto';
@@ -12,7 +15,9 @@ export class AuthService {
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
 
-    @InjectRepository(OTPEntity) private otpRepository: Repository<OTPEntity>
+    @InjectRepository(OTPEntity) private otpRepository: Repository<OTPEntity>,
+    private jwtService: JwtService,
+    private configService: ConfigService
   ) { }
   async sendOtp(otpDto: SendOtpDto) {
     const { mobile } = otpDto
@@ -35,7 +40,8 @@ export class AuthService {
     if (!user.mobile_verify) {
       await this.userRepository.update({ id: user.id }, { mobile_verify: true })
     }
-    return { message: "You Logged-in Successfully" }
+    const { accessToken, refreshToken } = this.makeTokensForUser({ id: user.id, mobile })
+    return { accessToken, refreshToken, message: "You Logged-in Successfully" }
   }
 
   async createOtpForUser(user: UserEntity) {
@@ -56,5 +62,21 @@ export class AuthService {
     otp = await this.otpRepository.save(otp)
     user.otpId = otp.id
     await this.userRepository.save(user)
+  }
+
+  makeTokensForUser(payload: TTokensPayload) {
+    const accessToken = this.jwtService.sign(
+      payload,
+      {
+        secret: this.configService.get("Jwt.accessTokenSecret"),
+        expiresIn: "30d"
+      })
+    const refreshToken = this.jwtService.sign(
+      payload,
+      {
+        secret: this.configService.get("Jwt.refreshTokenSecret"),
+        expiresIn: "1y"
+      })
+    return { accessToken, refreshToken }
   }
 }
