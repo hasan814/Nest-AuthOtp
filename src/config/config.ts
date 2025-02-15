@@ -8,11 +8,11 @@ export enum ConfigKeys {
 const AppConfig = registerAs(ConfigKeys.App, () => ({ port: 3000 }))
 
 const DbConfig = registerAs(ConfigKeys.Db, () => ({
-  port: 3000,
+  port: 5432,
   host: "localhost",
   database: "auth-otp",
   password: "81425000",
-  username: "postgress",
+  username: "postgres",
 }))
 
 export const configurations = [AppConfig, DbConfig]
