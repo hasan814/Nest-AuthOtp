@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { CheckOtpDto, SendOtpDto } from './dto/auth.dto';
+import { hashSync, genSaltSync } from "bcrypt"
 import { InjectRepository } from '@nestjs/typeorm';
 import { TTokensPayload } from './types/payload';
 import { ConfigService } from '@nestjs/config';
@@ -8,6 +9,9 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { OTPEntity } from '../user/entities/otp.entity';
 import { randomInt } from 'crypto';
+import { SignupDto } from './dto/basic.dto';
+
+
 
 @Injectable()
 export class AuthService {
@@ -94,5 +98,40 @@ export class AuthService {
       throw new UnauthorizedException("Login on Your account!")
 
     }
+  }
+
+  async signup(signupDto: SignupDto) {
+    const { first_name, last_name, mobile, email, password, confirm_password } = signupDto;
+    await this.checkEmail(email)
+    await this.checkMobile(mobile)
+
+    if (password !== confirm_password) throw new BadRequestException('Passwords do not match!');
+
+    const existingUser = await this.userRepository.findOneBy({ email });
+    if (existingUser) throw new BadRequestException('Email is already in use!');
+
+    const salt = genSaltSync(10)
+    let hashedPassword = hashSync(password, salt);
+
+    const newUser = this.userRepository.create({
+      first_name,
+      last_name,
+      mobile,
+      email,
+      password: hashedPassword,
+      mobile_verify: false
+    });
+
+    await this.userRepository.save(newUser);
+    return { message: 'User registered successfully.' }
+  }
+
+  async checkEmail(email: string) {
+    const user = await this.userRepository.findOneBy({ email })
+    if (user) throw new ConflictException("email is already exits!")
+  }
+  async checkMobile(mobile: string) {
+    const user = await this.userRepository.findOneBy({ mobile })
+    if (user) throw new ConflictException("mobile is already exits!")
   }
 }
