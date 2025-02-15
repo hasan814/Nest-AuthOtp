@@ -10,5 +10,6 @@ import { Module } from '@nestjs/common';
   imports: [TypeOrmModule.forFeature([UserEntity, OTPEntity])],
   controllers: [AuthController],
   providers: [AuthService, JwtService],
+  exports: [AuthService, JwtService, TypeOrmModule]
 })
 export class AuthModule { }
