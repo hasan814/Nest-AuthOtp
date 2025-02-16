@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { CheckOtpDto, SendOtpDto } from './dto/auth.dto';
-import { hashSync, genSaltSync } from "bcrypt"
+import { hashSync, genSaltSync, compareSync } from "bcrypt"
 import { InjectRepository } from '@nestjs/typeorm';
 import { TTokensPayload } from './types/payload';
 import { ConfigService } from '@nestjs/config';
@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { OTPEntity } from '../user/entities/otp.entity';
 import { randomInt } from 'crypto';
-import { SignupDto } from './dto/basic.dto';
+import { LoginDto, SignupDto } from './dto/basic.dto';
 
 
 
@@ -124,6 +124,16 @@ export class AuthService {
 
     await this.userRepository.save(newUser);
     return { message: 'User registered successfully.' }
+  }
+  async login(loginDto: LoginDto) {
+    const { email, password } = loginDto;
+
+    const user = await this.userRepository.findOneBy({ email });
+    if (!user) throw new BadRequestException('Not Found User!');
+    if (!compareSync(password, user.password)) throw new UnauthorizedException("Username or Password are not Equals")
+
+    const { accessToken, refreshToken } = this.makeTokensForUser({ mobile: user.mobile, id: user.id })
+    return { accessToken, refreshToken, message: 'Use Logged in successfully.' }
   }
 
   async checkEmail(email: string) {
