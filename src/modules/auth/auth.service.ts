@@ -47,9 +47,7 @@ export class AuthService {
     const { first_name, last_name, mobile, email, password, confirm_password } = signupDto
     await this.checkEmail(email)
     await this.checkMobile(mobile)
-    if (password !== confirm_password) throw new BadRequestException("Password and Confirm Passowrd should be the same!")
-    const salt = genSaltSync(10)
-    let hashedPassword = hashSync(password, salt)
+    let hashedPassword = this.hashPassword(password)
     const user = this.userRepository.create({ first_name, last_name, mobile, password: hashedPassword, mobile_verify: true })
     await this.userRepository.save(user)
     return { message: "User Signup Successfully!" }
@@ -99,6 +97,11 @@ export class AuthService {
     } catch (error) {
       throw new UnauthorizedException("Login on into Your Account!")
     }
+  }
+
+  hashPassword(password: string) {
+    const salt = genSaltSync(10)
+    return hashSync(password, salt)
   }
 
 }

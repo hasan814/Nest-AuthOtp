@@ -8,6 +8,7 @@ import {
   ValidateIf,
   IsMobilePhone
 } from "class-validator";
+import { ConfirmedPassword } from "src/common/decorators/password.decorator";
 
 export class SignupDto {
   @IsString()
@@ -37,9 +38,9 @@ export class SignupDto {
   })
   password: string;
 
-  @ValidateIf((o) => o.password !== undefined)
   @IsString()
   @IsNotEmpty()
+  @ConfirmedPassword("password")
   confirm_password: string;
 }
 
