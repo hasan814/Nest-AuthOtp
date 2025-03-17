@@ -1,3 +1,5 @@
+import { ConfirmedPassword } from "src/common/decorators/password.decorator";
+
 import {
   IsEmail,
   IsString,
@@ -8,7 +10,6 @@ import {
   ValidateIf,
   IsMobilePhone
 } from "class-validator";
-import { ConfirmedPassword } from "src/common/decorators/password.decorator";
 
 export class SignupDto {
   @IsString()

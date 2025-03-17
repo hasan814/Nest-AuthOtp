@@ -1,5 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { compareSync, genSaltSync, hashSync } from 'bcryptjs';
 import { CheckOtpDto, SendOtpDto } from './dto/otp.dto';
+import { SignupDto, LoginDto } from './dto/basic.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { TTokenPayload } from './types/payload';
@@ -8,8 +10,6 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { OTPEntity } from '../user/entities/otp.entity';
 import { randomInt } from 'crypto';
-import { SignupDto } from './dto/basic.dto';
-import { genSaltSync, hashSync } from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
@@ -31,6 +31,7 @@ export class AuthService {
     return { message: "Sent Code Successfully!" }
   }
 
+
   async checkOtp(otpDto: CheckOtpDto) {
     const { code, mobile } = otpDto
     const now = new Date()
@@ -48,9 +49,18 @@ export class AuthService {
     await this.checkEmail(email)
     await this.checkMobile(mobile)
     let hashedPassword = this.hashPassword(password)
-    const user = this.userRepository.create({ first_name, last_name, mobile, password: hashedPassword, mobile_verify: true })
+    const user = this.userRepository.create({ first_name, last_name, mobile, password: hashedPassword, mobile_verify: true, email })
     await this.userRepository.save(user)
     return { message: "User Signup Successfully!" }
+  }
+
+  async login(loginDto: LoginDto) {
+    const { email, password } = loginDto
+    const user = await this.userRepository.findOneBy({ email })
+    if (!user) throw new UnauthorizedException("username or password is Incorrect!")
+    if (!compareSync(password, user.password)) throw new UnauthorizedException("username or password is Incorrect!")
+    const { accessToken, refreshToken } = this.makeTokensForUser({ mobile: user.mobile, id: user.id })
+    return { accessToken, refreshToken, message: "You Logged in Successfully!" }
   }
 
   async checkEmail(email: string) {
