@@ -1,13 +1,13 @@
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { CheckOtpDto, SendOtpDto } from './dto/auth.dto';
+import { CheckOtpDto, SendOtpDto } from './dto/otp.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
+import { TTokenPayload } from './types/payload';
 import { UserEntity } from '../user/entities/user.entity';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { OTPEntity } from '../user/entities/otp.entity';
 import { randomInt } from 'crypto';
-import { TTokenPayload } from './types/payload';
 
 @Injectable()
 export class AuthService {
