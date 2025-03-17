@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { CheckOtpDto, SendOtpDto } from './dto/otp.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -8,6 +8,8 @@ import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
 import { OTPEntity } from '../user/entities/otp.entity';
 import { randomInt } from 'crypto';
+import { SignupDto } from './dto/basic.dto';
+import { genSaltSync, hashSync } from 'bcryptjs';
 
 @Injectable()
 export class AuthService {
@@ -39,6 +41,28 @@ export class AuthService {
     if (!user.mobile_verify) await this.userRepository.update({ id: user.id }, { mobile_verify: true })
     const { accessToken, refreshToken } = this.makeTokensForUser({ id: user.id, mobile })
     return { accessToken, refreshToken, message: "You Logged-in Successfully" }
+  }
+
+  async signup(signupDto: SignupDto) {
+    const { first_name, last_name, mobile, email, password, confirm_password } = signupDto
+    await this.checkEmail(email)
+    await this.checkMobile(mobile)
+    if (password !== confirm_password) throw new BadRequestException("Password and Confirm Passowrd should be the same!")
+    const salt = genSaltSync(10)
+    let hashedPassword = hashSync(password, salt)
+    const user = this.userRepository.create({ first_name, last_name, mobile, password: hashedPassword, mobile_verify: true })
+    await this.userRepository.save(user)
+    return { message: "User Signup Successfully!" }
+  }
+
+  async checkEmail(email: string) {
+    const user = await this.userRepository.findOneBy({ email })
+    if (user) throw new ConflictException("Email is already exist!")
+  }
+
+  async checkMobile(mobile: string) {
+    const user = await this.userRepository.findOneBy({ mobile })
+    if (user) throw new ConflictException("Mobile is Already exist!")
   }
 
   async createOtpForUser(user: UserEntity) {
