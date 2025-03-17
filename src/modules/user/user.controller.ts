@@ -1,11 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { UserService } from './user.service';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserService } from './user.service';
+import { AuthGuard } from '../auth/guard/auth.guard';
+import { Request } from 'express';
 
 @Controller('user')
+@UseGuards(AuthGuard)
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @Post()
   create(@Body() createUserDto: CreateUserDto) {
@@ -15,6 +18,11 @@ export class UserController {
   @Get()
   findAll() {
     return this.userService.findAll();
+  }
+
+  @Get("/profile")
+  profile(@Req() request: Request) {
+    return request.user;
   }
 
   @Get(':id')
