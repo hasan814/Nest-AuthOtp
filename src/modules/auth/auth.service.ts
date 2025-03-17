@@ -1,16 +1,21 @@
-import { InjectRepository } from '@nestjs/typeorm';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
-import { UserEntity } from '../user/entities/user.entity';
-import { Repository } from 'typeorm';
 import { CheckOtpDto, SendOtpDto } from './dto/auth.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
+import { UserEntity } from '../user/entities/user.entity';
+import { JwtService } from '@nestjs/jwt';
+import { Repository } from 'typeorm';
 import { OTPEntity } from '../user/entities/otp.entity';
 import { randomInt } from 'crypto';
+import { TTokenPayload } from './types/payload';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(UserEntity) private userRepository: Repository<UserEntity>,
-    @InjectRepository(OTPEntity) private otpRepository: Repository<OTPEntity>
+    @InjectRepository(OTPEntity) private otpRepository: Repository<OTPEntity>,
+    private jwtService: JwtService,
+    private configService: ConfigService
   ) { }
 
   async sendOtp(otpDto: SendOtpDto) {
@@ -32,7 +37,8 @@ export class AuthService {
     if (user?.otp?.code !== code) throw new UnauthorizedException("Otp code is incorrect!")
     if (user?.otp?.expires_in < now) throw new UnauthorizedException("Otp Code is expired!")
     if (!user.mobile_verify) await this.userRepository.update({ id: user.id }, { mobile_verify: true })
-    return { message: "You Logged-in Successfully" }
+    const { accessToken, refreshToken } = this.makeTokensForUser({ id: user.id, mobile })
+    return { accessToken, refreshToken, message: "You Logged-in Successfully" }
   }
 
   async createOtpForUser(user: UserEntity) {
@@ -50,4 +56,11 @@ export class AuthService {
     user.otpId = otp.id
     await this.userRepository.save(user)
   }
+
+  makeTokensForUser(payload: TTokenPayload) {
+    const accessToken = this.jwtService.sign(payload, { secret: this.configService.get("Jwt.accessTokenSecret"), expiresIn: "30d" })
+    const refreshToken = this.jwtService.sign(payload, { secret: this.configService.get("Jwt.refreshTokenSecret"), expiresIn: "1y" })
+    return { accessToken, refreshToken }
+  }
+
 }
