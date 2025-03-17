@@ -1,8 +1,8 @@
 import { InjectRepository } from '@nestjs/typeorm';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserEntity } from '../user/entities/user.entity';
 import { Repository } from 'typeorm';
-import { SendOtpDto } from './dto/auth.dto';
+import { CheckOtpDto, SendOtpDto } from './dto/auth.dto';
 import { OTPEntity } from '../user/entities/otp.entity';
 import { randomInt } from 'crypto';
 
@@ -24,7 +24,16 @@ export class AuthService {
     return { message: "Sent Code Successfully!" }
   }
 
-  async checkOtp() { }
+  async checkOtp(otpDto: CheckOtpDto) {
+    const { code, mobile } = otpDto
+    const now = new Date()
+    const user = await this.userRepository.findOne({ where: { mobile }, relations: { otp: true } })
+    if (!user || !user?.otp) throw new UnauthorizedException("Not Found Accound!")
+    if (user?.otp?.code !== code) throw new UnauthorizedException("Otp code is incorrect!")
+    if (user?.otp?.expires_in < now) throw new UnauthorizedException("Otp Code is expired!")
+    if (!user.mobile_verify) await this.userRepository.update({ id: user.id }, { mobile_verify: true })
+    return { message: "You Logged-in Successfully" }
+  }
 
   async createOtpForUser(user: UserEntity) {
     const code = randomInt(10000, 99999).toString()
